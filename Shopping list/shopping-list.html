@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Lista de Compras Melhorada</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f2f2f2;
+        display: flex;
+        justify-content: center;
+        padding-top: 60px;
+      }
+
+      .container {
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        width: 380px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      }
+
+      h2 {
+        text-align: center;
+        margin-bottom: 10px;
+        color: #333;
+      }
+
+      .top-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+
+      input[type='text'] {
+        width: 65%;
+        padding: 10px;
+        font-size: 1em;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+
+      button {
+        padding: 10px;
+        font-size: 1em;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #218838;
+      }
+
+      .clear-btn {
+        background: #dc3545;
+        margin-top: 10px;
+        width: 100%;
+      }
+
+      .filters {
+        margin: 10px 0;
+        text-align: center;
+      }
+
+      .filters button {
+        margin: 0 5px;
+        background: #007bff;
+      }
+
+      .filters button.active {
+        background: #0056b3;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin-top: 10px;
+      }
+
+      li {
+        background: #eee;
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      li.comprado {
+        background: #d4edda;
+        text-decoration: line-through;
+        color: #555;
+      }
+
+      .item-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .remove-btn {
+        background: #dc3545;
+        border: none;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .remove-btn:hover {
+        background: #c82333;
+      }
+
+      .contador {
+        font-size: 0.9em;
+        text-align: center;
+        margin-top: 10px;
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Lista de Compras</h2>
+      <div class="top-row">
+        <input type="text" id="itemInput" placeholder="Digite um item" />
+        <button id="addBtn">Adicionar</button>
+      </div>
+
+      <div class="filters">
+        <button data-filter="all" class="active">Todos</button>
+        <button data-filter="pendente">Pendentes</button>
+        <button data-filter="comprado">Comprados</button>
+      </div>
+
+      <ul id="itemList"></ul>
+
+      <button class="clear-btn" id="clearAllBtn">Limpar Tudo</button>
+
+      <div class="contador" id="contador"></div>
+    </div>
+
+    <script>
+      const itemInput = document.getElementById('itemInput')
+      const addBtn = document.getElementById('addBtn')
+      const itemList = document.getElementById('itemList')
+      const clearAllBtn = document.getElementById('clearAllBtn')
+      const contador = document.getElementById('contador')
+      const filterButtons = document.querySelectorAll('.filters button')
+
+      let items = JSON.parse(localStorage.getItem('shoppingList')) || []
+      let currentFilter = 'all'
+
+      function renderList() {
+        itemList.innerHTML = ''
+        const filtered = items.filter((item) => {
+          if (currentFilter === 'comprado') return item.comprado
+          if (currentFilter === 'pendente') return !item.comprado
+          return true
+        })
+
+        filtered.forEach((item, index) => {
+          const li = document.createElement('li')
+          if (item.comprado) li.classList.add('comprado')
+
+          const checkbox = document.createElement('input')
+          checkbox.type = 'checkbox'
+          checkbox.checked = item.comprado
+          checkbox.addEventListener('change', () => {
+            items[index].comprado = checkbox.checked
+            saveAndRender()
+          })
+
+          const span = document.createElement('span')
+          span.textContent = item.nome
+
+          const removeBtn = document.createElement('button')
+          removeBtn.textContent = 'Remover'
+          removeBtn.className = 'remove-btn'
+          removeBtn.onclick = () => {
+            items.splice(index, 1)
+            saveAndRender()
+          }
+
+          const left = document.createElement('div')
+          left.className = 'item-left'
+          left.appendChild(checkbox)
+          left.appendChild(span)
+
+          li.appendChild(left)
+          li.appendChild(removeBtn)
+          itemList.appendChild(li)
+        })
+
+        updateContador()
+      }
+
+      function updateContador() {
+        const total = items.length
+        const comprados = items.filter((i) => i.comprado).length
+        const pendentes = total - comprados
+
+        contador.textContent = `Total: ${total} | Pendentes: ${pendentes} | Comprados: ${comprados}`
+      }
+
+      function saveAndRender() {
+        localStorage.setItem('shoppingList', JSON.stringify(items))
+        renderList()
+      }
+
+      addBtn.addEventListener('click', () => {
+        const nome = itemInput.value.trim()
+        if (nome !== '') {
+          items.push({ nome, comprado: false })
+          itemInput.value = ''
+          saveAndRender()
+        }
+      })
+
+      itemInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addBtn.click()
+      })
+
+      clearAllBtn.addEventListener('click', () => {
+        if (confirm('Deseja apagar todos os itens da lista?')) {
+          items = []
+          saveAndRender()
+        }
+      })
+
+      filterButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          filterButtons.forEach((b) => b.classList.remove('active'))
+          btn.classList.add('active')
+          currentFilter = btn.dataset.filter
+          renderList()
+        })
+      })
+
+      renderList()
+    </script>
+  </body>
+</html>
